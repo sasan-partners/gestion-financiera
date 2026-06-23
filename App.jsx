@@ -875,7 +875,7 @@ function TransactionsView({ type, setToast, session: parentSession }) {
 
   const handleSave = async () => {
     try {
-      const body = { type, transaction_date: form.transaction_date, amount: Number(form.amount), description: form.description || null, category_id: form.category_id || null, project_id: form.project_id || null, currency_id: form.currency_id || null, partner_id: form.partner_id || null, payment_method_id: form.payment_method_id || null, user_id: userId };
+      const body = { type, transaction_date: form.transaction_date, amount: Number(form.amount), description: form.description || null, category_id: form.category_id || null, project_id: form.project_id || null, currency_id: form.currency_id || null, partner_id: form.partner_id || null, payment_method_id: form.payment_method_id || null, user_id: session?.user?.id }; user_id: userId };
       if (editId) {
         await supabaseRest(`transactions?id=eq.${editId}`, { method: "PATCH", body: JSON.stringify(body) }, token);
       } else {
