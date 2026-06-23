@@ -14,9 +14,10 @@ const supabaseHeaders = (token) => ({
 });
 
 async function supabaseRest(path, options = {}, token) {
+  const { headers: extraHeaders, ...restOptions } = options;
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: supabaseHeaders(token),
-    ...options,
+    ...restOptions,
+    headers: { ...supabaseHeaders(token), ...extraHeaders },
   });
   if (!res.ok) {
     const err = await res.text();
@@ -736,6 +737,7 @@ function FiltersPanel({ filters, onChange, businessUnits, projects, clients, par
 function CrudView({ title, table, columns, formFields, select = "*", toast: setToast }) {
   const { session } = useAuth();
   const token = session?.access_token;
+  const userId = session?.user?.id;
   const { data, loading, refetch } = useSupabaseQuery(table, select, "&is_active=eq.true&order=name.asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -748,6 +750,7 @@ function CrudView({ title, table, columns, formFields, select = "*", toast: setT
     try {
       const body = {};
       formFields.forEach(f => { if (form[f.key] !== undefined) body[f.key] = form[f.key]; });
+      if (!editId) body.user_id = userId;
       if (editId) {
         await supabaseRest(`${table}?id=eq.${editId}`, { method: "PATCH", body: JSON.stringify(body) }, token);
         showToast(setToast, "Actualizado", `Registro actualizado correctamente.`);
@@ -842,9 +845,10 @@ function CrudView({ title, table, columns, formFields, select = "*", toast: setT
 // ============================================================
 // TRANSACTIONS VIEW
 // ============================================================
-function TransactionsView({ type, setToast }) {
+function TransactionsView({ type, setToast, session: parentSession }) {
   const { session } = useAuth();
   const token = session?.access_token;
+  const userId = session?.user?.id;
   const typeLabel = type === "ingreso" ? "Ingreso" : "Gasto";
   const selectQ = "*,projects(name),categories(name,type),partners(name),suppliers(name),payment_methods(name),currencies(code,symbol),business_units(name)";
   const { data: transactions, loading, refetch } = useSupabaseQuery("transactions", selectQ, `&type=eq.${type}&order=transaction_date.desc`);
@@ -871,7 +875,7 @@ function TransactionsView({ type, setToast }) {
 
   const handleSave = async () => {
     try {
-      const body = { type, transaction_date: form.transaction_date, amount: Number(form.amount), description: form.description || null, category_id: form.category_id || null, project_id: form.project_id || null, currency_id: form.currency_id || null, partner_id: form.partner_id || null, payment_method_id: form.payment_method_id || null };
+      const body = { type, transaction_date: form.transaction_date, amount: Number(form.amount), description: form.description || null, category_id: form.category_id || null, project_id: form.project_id || null, currency_id: form.currency_id || null, partner_id: form.partner_id || null, payment_method_id: form.payment_method_id || null, user_id: userId };
       if (editId) {
         await supabaseRest(`transactions?id=eq.${editId}`, { method: "PATCH", body: JSON.stringify(body) }, token);
       } else {
@@ -1004,6 +1008,7 @@ function TransactionsView({ type, setToast }) {
 function BudgetView({ setToast }) {
   const { session } = useAuth();
   const token = session?.access_token;
+  const userId = session?.user?.id;
   const { data: budgets, loading, refetch } = useSupabaseQuery("budgets", "*,projects(name),categories(name,type),currencies(code,symbol)", "&order=year.desc,month.asc");
   const { data: projects } = useSupabaseQuery("projects", "*", "&is_active=eq.true&order=name.asc");
   const { data: categories } = useSupabaseQuery("categories", "*", "&is_active=eq.true&order=name.asc");
@@ -1018,7 +1023,7 @@ function BudgetView({ setToast }) {
 
   const handleSave = async () => {
     try {
-      const body = { project_id: form.project_id || null, category_id: form.category_id, currency_id: form.currency_id, amount: Number(form.amount), month: form.month ? Number(form.month) : null, year: Number(form.year) };
+      const body = { project_id: form.project_id || null, category_id: form.category_id, currency_id: form.currency_id, amount: Number(form.amount), month: form.month ? Number(form.month) : null, year: Number(form.year), user_id: userId };
       if (editId) {
         await supabaseRest(`budgets?id=eq.${editId}`, { method: "PATCH", body: JSON.stringify(body) }, token);
       } else {
